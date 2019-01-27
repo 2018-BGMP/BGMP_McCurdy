@@ -1,0 +1,128 @@
+---
+title: "specific significance"
+author: "Alex Ostrovsky"
+date: "11/28/2018"
+output: html_document
+---
+
+```{r directory, include=FALSE}
+setwd("/Users/alexanderostrovsky/Desktop/McCurdy/2018-group-projects-mccurdy/LipidData/LipidData/CSVs from given data/Processed CSVs (format and LOQ)/Modified LOQ/")
+knitr::opts_chunk$set(error = TRUE)
+```
+
+```{r libraries, include=FALSE, eval=TRUE}
+
+library(tidyverse)
+#install.packages("vegan", repos = "https://cran.r-project.org/src/contrib/vegan_2.5-2.tar.gz")
+#install.packages("MASS", repos = "https://cran.r-project.org/src/contrib/MASS_7.3-50.tar.gz")
+library("vegan")
+library("MASS")
+
+#install.packages("gplots", repos = "https://cran.r-project.org/src/contrib/gplots_3.0.1.tar.gz")
+#install.packages("RColorBrewer", repos = "https://cran.r-project.org/src/contrib/RColorBrewer_1.1-2.tar.gz")
+#install.packages("dendextend",repos = "https://cran.r-project.org/src/contrib/dendextend_1.8.0.tar.gz")
+library("gplots")
+library("RColorBrewer")
+library("dendextend")
+#load packages
+```
+
+```{r data import, include=F}
+metadata <- as.tibble(read.table("../../../../../RNAseq Analysis/RNAseq Analysis/metadata.txt", header = TRUE)[c(2, 4:15, 17:25, 27:40),2:4])
+metadata <- metadata %>% mutate(.,"Organism" = rownames(.))
+metadata <- metadata %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, sep = "."))
+metadata$combinations <- as.factor(metadata$combinations)
+DGs1.2 <- cbind(metadata[,5], read.csv("1.2DGs.changed LOQ.csv", head = TRUE, row.names = 1))
+AC <- cbind(metadata[,5],read.csv("AC.formatted.noloq.csv", head = TRUE, row.names = 1))
+Cer <- cbind(metadata[,5],read.csv("Cerimides.changedLOQ.csv", head = TRUE, row.names = 1))
+DGs1.3 <- cbind(metadata[,5],read.csv("CM033018 1-3DGs.changedLOQ.csv", head = TRUE, row.names = 1))
+dh <- cbind(metadata[,5],read.csv("dhCer.changedLOQ.csv", head = TRUE, row.names = 1))
+Glu <- cbind(metadata[,5],read.csv("GluCer.changedLOQ.csv", head = TRUE, row.names = 1))
+hex <- cbind(metadata[,5],read.csv("hexosylCer.changedLOQ.csv", head = TRUE, row.names = 1))
+Lac <- cbind(metadata[,5],read.csv("LacCer.changedLOQ.csv", head = TRUE, row.names = 1))
+mye <- cbind(metadata[,5],read.csv("Sphingomyelins.formatted.noloq.csv", head = TRUE, row.names = 1))
+sine <- cbind(metadata[,5],read.csv("Sphingosine.formatted.noloq.editfordismatrix.csv", header = TRUE, row.names = 1))
+TAG <- cbind(metadata[,5],read.csv("TAG.changedLOQ.csv", head = TRUE, row.names = 1))
+plotlist <- list(DGs1.2, DGs1.3, TAG, AC, dh, Glu, hex, Lac, sine, Cer, mye)
+plotname <- c("DGs1.2", "DGs1.3", "TAG", "AC", "dh", "Glu", "hex", "Lac", "sine", "Cer", "mye")
+```
+
+```{r anova AC, echo = F}
+n <- colnames(AC[, 2:13])
+for(x in n){
+  print(x)
+  print(anova(aov(AC[,x]~AC$combinations)))
+}
+```
+
+```{r anova Cer, echo = F}
+n <- colnames(Cer[, 2:10])
+for(x in n){
+  print(x)
+  print(anova(aov(Cer[,x]~Cer$combinations)))
+}
+```
+
+```{r anova DGs1.2, echo = F}
+n <- colnames(DGs1.2[, 2:25])
+for(x in n){
+  print(x)
+  print(anova(aov(DGs1.2[,x]~DGs1.2$combinations)))
+}
+```
+
+```{r anova DGs1.3, echo = F}
+n <- colnames(DGs1.3[, 2:9])
+for(x in n){
+  print(x)
+  print(anova(aov(DGs1.3[,x]~DGs1.3$combinations)))
+}
+```
+
+```{r anova dh, echo = F}
+n <- colnames(dh[, 2:6])
+for(x in n){
+  print(x)
+  print(anova(aov(dh[,x]~dh$combinations)))
+}
+```
+
+```{r anova Glu, echo = F}
+n <- colnames(Glu[, 2:7])
+for(x in n){
+  print(x)
+  print(anova(aov(Glu[,x]~Glu$combinations)))
+}
+```
+
+```{r anova hex, echo = F}
+n <- colnames(hex[, 2:9])
+for(x in n){
+  print(x)
+  print(anova(aov(hex[,x]~hex$combinations)))
+}
+```
+
+```{r anova lac, echo = F}
+n <- colnames(Lac[, 2:8])
+for(x in n){
+  print(x)
+  print(anova(aov(Lac[,x]~Lac$combinations)))
+}
+```
+
+```{r anova mye, echo = F}
+n <- colnames(mye[, 2:13])
+for(x in n){
+  print(x)
+  print(anova(aov(mye[,x]~mye$combinations)))
+}
+```
+
+```{r anova tag, echo = F}
+n <- colnames(TAG[, 2:28])
+for(x in n){
+  print(x)
+  print(anova(aov(TAG[,x]~TAG$combinations)))
+}
+```

@@ -1,0 +1,662 @@
+---
+title: "secondary anova"
+author: "Alex Ostrovsky"
+date: "1/17/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r import, echo = F, message = F, warning = F}
+library(tidyverse)
+library(reshape)
+metadata <- as.tibble(read.table("/Users/alexanderostrovsky/Desktop/McCurdy/2018-group-projects-mccurdy/RNAseq Analysis/RNAseq Analysis/metadata.txt", header = T, sep = '\t')[c(2, 4:15, 17:25, 27:40),])
+colnames(metadata) <- c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex")
+setwd("/Users/alexanderostrovsky//Desktop/McCurdy/2018-group-projects-mccurdy/LipidData/LipidData/CSVs from given data/Processed CSVs (format and LOQ)/Modified LOQ/")
+DGs1.2 <- as.tibble(read.csv("1.2DGs.changed LOQ.csv", head = TRUE))
+DGs1.2 <- cbind(metadata, DGs1.2[,2:25])
+DGs1.2 <- DGs1.2[1:29,]
+AC <- as.tibble(read.csv("AC.formatted.noloq.csv", head = TRUE))
+AC <- cbind(metadata, AC[,2:13])
+AC <- AC[1:29,]
+Cer <- as.tibble(read.csv("Cerimides.changedLOQ.csv", head = TRUE))
+Cer <- cbind(metadata, Cer[,2:10])
+Cer <- Cer[1:29,]
+DGs1.3 <- as.tibble(read.csv("CM033018 1-3DGs.changedLOQ.csv", head = TRUE))
+DGs1.3 <- cbind(metadata, DGs1.3[,2:9])
+DGs1.3 <- DGs1.3[1:29,]
+dh <- as.tibble(read.csv("dhCer.changedLOQ.csv", head = TRUE))
+dh <- cbind(metadata, dh[,2:6])
+dh <- dh[1:29,]
+Glu <- as.tibble(read.csv("GluCer.changedLOQ.csv", head = TRUE))
+Glu <- cbind(metadata, Glu[,2:8])
+Glu <- Glu[1:29,]
+hex <- as.tibble(read.csv("hexosylCer.changedLOQ.csv", head = TRUE))
+hex <- cbind(metadata, hex[,2:9])
+hex <- hex[1:29,]
+Lac <- as.tibble(read.csv("LacCer.changedLOQ.csv", head = TRUE))
+Lac <- cbind(metadata, Lac[,2:8])
+hex<- hex[1:29,]
+mye <- as.tibble(read.csv("Sphingomyelins.formatted.noloq.csv"))
+mye <- cbind(metadata, mye[,2:14])
+mye <- mye[1:29,]
+sine <- as.tibble(read.csv("Sphingosine.formatted.noloq.editfordismatrix.csv", header = TRUE))
+sine <- cbind(metadata, sine[,2])
+sine <- sine[1:29,]
+TAG <- as.tibble(read.csv("TAG.changedLOQ.csv", head = TRUE))
+TAG <- cbind(metadata, TAG[,2:28])
+TAG <- TAG[1:29,]
+```
+
+# Acylcarnitine
+
+```{r AC, echo = F, message = F, warning = F}
+acchain <- melt(AC, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+acchain[,7] <- as.character(acchain[,7])
+acchain[,7] <- as.numeric(substr(acchain[,7], 2,length(acchain[,7])))
+acchain[,9] <- acchain[,7] %% 1 == 0
+colnames(acchain)[9] <- "Saturated"
+acchain[,7] <- as.numeric(substr(as.character(acchain[,7]), 1,2))
+num <- length(acchain[,1])
+for(x in 1:num){
+  if(acchain[x,7] < 8){
+   acchain[x,7] <- "small"
+  } else if(8 <= acchain[x,7] & acchain[x,7] < 16){
+    acchain[x,7] <- "medium"
+  } else if(16 <= acchain[x,7] & acchain[x,7] < 22){
+    acchain[x,7] <- "long"
+  } else {
+    acchain[x,7] <- "vlong"
+  }
+  if(acchain[x,9] == TRUE){
+    acchain[x,9] <- "Saturated"
+  } else{
+    acchain[x,9] <- "Unsaturated"
+  }
+}
+acchain[,7] <- as.factor(acchain[,7])
+acchain[,9] <- as.factor(acchain[,9])
+acchain <- as.tibble(acchain)
+acchain <- acchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+acchain <- acchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+acchain <- acchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+acchain <- acchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+acchain <- acchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+acchain <- acchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+lenlabs <- c("CTR-CTR\nMedium", "CTR-CTR\nShort", "CTR-CTR\nVery Long", "CTR-HFD\nShort", "CTR-HFD\nVery Long", "HFD-CTR\nShort", "HFD-CTR\nVery Long", "HFD-HFD\nShort", "HFD-HFD\nVery Long")
+ggplot(data = acchain, aes(x = combinations, y = log(value), fill = combinations)) + geom_boxplot() + scale_fill_manual(values =c("#F8766D", "#F8766D", "#F8766D", "#A3A500", "#A3A500", "#00BF7D", "#00BF7D", "#00B0F6", "#00B0F6")) + theme_classic() + theme(legend.position = "None") +
+  labs(y = "log(lipid mass (pmol))", title = "Acylcarnitine")  + xlab("") + scale_x_discrete(labels = lenlabs) + 
+  theme(plot.title = element_text(hjust = 0.5))
+satlabs <- c("CTR-CTR\nSaturated", "CTR-CTR\nUnsaturated", "CTR-HFD\nSaturated", "CTR-HFD\nUnsaturated", "HFD-CTR\nSaturated", "HFD-CTR\nUnsaturated", "HFD-HFD\nSaturated", "HFD-HFD\nUnsaturated")
+ggplot(data = acchain, aes(x = satcombinations, y = log(value), fill = satcombinations)) + geom_boxplot() +  scale_fill_manual(values =c("#F8766D", "#F8766D", "#A3A500", "#A3A500", "#00BF7D", "#00BF7D", "#00B0F6", "#00B0F6")) + theme_classic() + theme(legend.position = "None") +
+  labs(y = "log(lipid mass (pmol))") + xlab("") + scale_x_discrete(labels = satlabs)
+
+print("Length as affected by combination")
+print(anova(aov(acchain$value~acchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(acchain$value~acchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(acchain$value~acchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(acchain$value~acchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(acchain$value~acchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(acchain$value~acchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(acchain$value~acchain$combinations)
+TukeyHSD(ano)
+
+print(anova(aov(acchain$value~acchain$M_Diet+acchain$PW_Diet+acchain$variable)))
+print(anova(aov(acchain$value~acchain$M_Diet+acchain$PW_Diet+acchain$Saturated)))
+```
+
+# Ceramides
+
+```{r Cer, echo = F, message = F, warning = F}
+cerchain <- melt(Cer, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+cerchain[,7] <- as.character(cerchain[,7])
+cerchain[,7] <- as.numeric(substr(cerchain[,7], 2,length(cerchain[,7])))
+cerchain[,9] <- cerchain[,7] %% 1 == 0
+colnames(cerchain)[9] <- "Saturated"
+cerchain[,7] <- as.numeric(substr(as.character(cerchain[,7]), 1,2))
+num <- length(cerchain[,1])
+for(x in 1:num){
+  if(cerchain[x,7] < 8){
+   cerchain[x,7] <- "small"
+  } else if(8 <= cerchain[x,7] & cerchain[x,7] < 16){
+    cerchain[x,7] <- "medium"
+  } else if(16 <= cerchain[x,7] & cerchain[x,7] < 22){
+    cerchain[x,7] <- "long"
+  } else {
+    cerchain[x,7] <- "vlong"
+  }
+  if(cerchain[x,9] == TRUE){
+    cerchain[x,9] <- "Saturated"
+  } else{
+    cerchain[x,9] <- "Unsaturated"
+  }
+}
+cerchain[,7] <- as.factor(cerchain[,7])
+cerchain[,9] <- as.factor(cerchain[,9])
+cerchain <- as.tibble(cerchain)
+cerchain <- cerchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+cerchain <- cerchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+cerchain <- cerchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+cerchain <- cerchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+cerchain <- cerchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+cerchain <- cerchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+cerchain <- cerchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(cerchain$value~cerchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(cerchain$value~cerchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(cerchain$value~cerchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(cerchain$value~cerchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(cerchain$value~cerchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(cerchain$value~cerchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(cerchain$value~cerchain$combinations)
+TukeyHSD(ano)
+```
+
+# DGs 1.2
+
+```{r DGs1.2, echo = F, message = F, warning = F}
+DGs1.2chain <- melt(DGs1.2, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+DGs1.2chain[,7] <- as.character(DGs1.2chain[,7])
+l <- length(DGs1.2chain[,7])
+for(n in 1:l){
+  testchar <- substr(as.character(DGs1.2chain[n,7]), 3,3)
+  if(testchar == "d"){
+    DGs1.2chain[n,7] <- substr(as.character(DGs1.2chain[n,7]), 4, 8)
+  }
+} 
+DGs1.2chain[,7] <- as.numeric(substr(DGs1.2chain[,7], 2,5))
+DGs1.2chain[,9] <- DGs1.2chain[,7] %% 1 == 0
+colnames(DGs1.2chain)[9] <- "Saturated"
+DGs1.2chain[,7] <- as.numeric(substr(as.character(DGs1.2chain[,7]), 1,2))
+num <- length(DGs1.2chain[,1])
+for(x in 1:num){
+  if(DGs1.2chain[x,7] < 8){
+   DGs1.2chain[x,7] <- "small"
+  } else if(8 <= DGs1.2chain[x,7] & DGs1.2chain[x,7] < 16){
+    DGs1.2chain[x,7] <- "medium"
+  } else if(16 <= DGs1.2chain[x,7] & DGs1.2chain[x,7] < 22){
+    DGs1.2chain[x,7] <- "long"
+  } else {
+    DGs1.2chain[x,7] <- "vlong"
+  }
+  if(DGs1.2chain[x,9] == TRUE){
+    DGs1.2chain[x,9] <- "Saturated"
+  } else{
+    DGs1.2chain[x,9] <- "Unsaturated"
+  }
+}
+DGs1.2chain[,7] <- as.factor(DGs1.2chain[,7])
+DGs1.2chain[,9] <- as.factor(DGs1.2chain[,9])
+DGs1.2chain <- as.tibble(DGs1.2chain)
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+DGs1.2chain <- DGs1.2chain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(DGs1.2chain$value~DGs1.2chain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(DGs1.2chain$value~DGs1.2chain$combinations)
+TukeyHSD(ano)
+```
+
+# DGs 1.3
+
+```{r DGs1.3, echo = F, message = F, warning = F}
+DGs1.3chain <- melt(DGs1.3, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+DGs1.3chain[,7] <- as.character(DGs1.3chain[,7])
+l <- length(DGs1.3chain[,7])
+for(n in 1:l){
+  testchar <- substr(as.character(DGs1.3chain[n,7]), 3,3)
+  if(testchar == "d"){
+    DGs1.3chain[n,7] <- substr(as.character(DGs1.3chain[n,7]), 4, 8)
+  }
+} 
+DGs1.3chain[,7] <- as.numeric(substr(DGs1.3chain[,7], 2,5))
+DGs1.3chain[,9] <- DGs1.3chain[,7] %% 1 == 0
+colnames(DGs1.3chain)[9] <- "Saturated"
+DGs1.3chain[,7] <- as.numeric(substr(as.character(DGs1.3chain[,7]), 1,2))
+num <- length(DGs1.3chain[,1])
+for(x in 1:num){
+  if(DGs1.3chain[x,7] < 8){
+   DGs1.3chain[x,7] <- "small"
+  } else if(8 <= DGs1.3chain[x,7] & DGs1.3chain[x,7] < 16){
+    DGs1.3chain[x,7] <- "medium"
+  } else if(16 <= DGs1.3chain[x,7] & DGs1.3chain[x,7] < 22){
+    DGs1.3chain[x,7] <- "long"
+  } else {
+    DGs1.3chain[x,7] <- "vlong"
+  }
+  if(DGs1.3chain[x,9] == TRUE){
+    DGs1.3chain[x,9] <- "Saturated"
+  } else{
+    DGs1.3chain[x,9] <- "Unsaturated"
+  }
+}
+DGs1.3chain[,7] <- as.factor(DGs1.3chain[,7])
+DGs1.3chain[,9] <- as.factor(DGs1.3chain[,9])
+DGs1.3chain <- as.tibble(DGs1.3chain)
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+DGs1.3chain <- DGs1.3chain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(DGs1.3chain$value~DGs1.3chain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(DGs1.3chain$value~DGs1.3chain$combinations)
+TukeyHSD(ano)
+```
+
+# Dihydrohceramide
+
+```{r dh, echo = F, message = F, warning = F}
+dhchain <- melt(dh, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+dhchain[,7] <- as.character(dhchain[,7])
+dhchain[,7] <- as.numeric(substr(dhchain[,7], 2,length(dhchain[,7])))
+dhchain[,9] <- dhchain[,7] %% 1 == 0
+colnames(dhchain)[9] <- "Saturated"
+dhchain[,7] <- as.numeric(substr(as.character(dhchain[,7]), 1,2))
+num <- length(dhchain[,1])
+for(x in 1:num){
+  if(dhchain[x,7] < 8){
+   dhchain[x,7] <- "small"
+  } else if(8 <= dhchain[x,7] & dhchain[x,7] < 16){
+    dhchain[x,7] <- "medium"
+  } else if(16 <= dhchain[x,7] & dhchain[x,7] < 22){
+    dhchain[x,7] <- "long"
+  } else {
+    dhchain[x,7] <- "vlong"
+  }
+  if(dhchain[x,9] == TRUE){
+    dhchain[x,9] <- "Saturated"
+  } else{
+    dhchain[x,9] <- "Unsaturated"
+  }
+}
+dhchain[,7] <- as.factor(dhchain[,7])
+dhchain[,9] <- as.factor(dhchain[,9])
+dhchain <- as.tibble(dhchain)
+dhchain <- dhchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+dhchain <- dhchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+dhchain <- dhchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+dhchain <- dhchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+dhchain <- dhchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+dhchain <- dhchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+dhchain <- dhchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(dhchain$value~dhchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(dhchain$value~dhchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(dhchain$value~dhchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(dhchain$value~dhchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(dhchain$value~dhchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(dhchain$value~dhchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(dhchain$value~dhchain$combinations)
+TukeyHSD(ano)
+```
+
+# Glucosylceramide
+
+```{r Glu, echo = F, message = F, warning = F}
+Gluchain <- melt(Glu, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+Gluchain[,7] <- as.character(Gluchain[,7])
+Gluchain[,7] <- as.numeric(substr(Gluchain[,7], 2,length(Gluchain[,7])))
+Gluchain[,9] <- Gluchain[,7] %% 1 == 0
+colnames(Gluchain)[9] <- "Saturated"
+Gluchain[,7] <- as.numeric(substr(as.character(Gluchain[,7]), 1,2))
+num <- length(Gluchain[,1])
+for(x in 1:num){
+  if(Gluchain[x,7] < 8){
+   Gluchain[x,7] <- "small"
+  } else if(8 <= Gluchain[x,7] & Gluchain[x,7] < 16){
+    Gluchain[x,7] <- "medium"
+  } else if(16 <= Gluchain[x,7] & Gluchain[x,7] < 22){
+    Gluchain[x,7] <- "long"
+  } else {
+    Gluchain[x,7] <- "vlong"
+  }
+  if(Gluchain[x,9] == TRUE){
+    Gluchain[x,9] <- "Saturated"
+  } else{
+    Gluchain[x,9] <- "Unsaturated"
+  }
+}
+Gluchain[,7] <- as.factor(Gluchain[,7])
+Gluchain[,9] <- as.factor(Gluchain[,9])
+Gluchain <- as.tibble(Gluchain)
+Gluchain <- Gluchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+Gluchain <- Gluchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(Gluchain$value~Gluchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(Gluchain$value~Gluchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(Gluchain$value~Gluchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(Gluchain$value~Gluchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(Gluchain$value~Gluchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(Gluchain$value~Gluchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(Gluchain$value~Gluchain$combinations)
+TukeyHSD(ano)
+```
+
+# Hexocylceramides
+
+```{r hex, echo = F, message = F, warning = F}
+hexchain <- melt(hex, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+hexchain[,7] <- as.character(hexchain[,7])
+l <- length(hexchain[,7])
+for(n in 1:l){
+  if(hexchain$variable[n] == "X24.1.2"){
+    hexchain$variable[n] <- "X24.1"
+  }
+}
+hexchain[,7] <- as.numeric(substr(hexchain[,7], 2,length(hexchain[,7])))
+hexchain[,9] <- hexchain[,7] %% 1 == 0
+colnames(hexchain)[9] <- "Saturated"
+hexchain[,7] <- as.numeric(substr(as.character(hexchain[,7]), 1,2))
+num <- length(hexchain[,1])
+for(x in 1:num){
+  if(hexchain[x,7] < 8){
+   hexchain[x,7] <- "small"
+  } else if(8 <= hexchain[x,7] & hexchain[x,7] < 16){
+    hexchain[x,7] <- "medium"
+  } else if(16 <= hexchain[x,7] & hexchain[x,7] < 22){
+    hexchain[x,7] <- "long"
+  } else {
+    hexchain[x,7] <- "vlong"
+  }
+  if(hexchain[x,9] == TRUE){
+    hexchain[x,9] <- "Saturated"
+  } else{
+    hexchain[x,9] <- "Unsaturated"
+  }
+}
+hexchain[,7] <- as.factor(hexchain[,7])
+hexchain[,9] <- as.factor(hexchain[,9])
+hexchain <- as.tibble(hexchain)
+hexchain <- hexchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+hexchain <- hexchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+hexchain <- hexchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+hexchain <- hexchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+hexchain <- hexchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+hexchain <- hexchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+hexchain <- hexchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(hexchain$value~hexchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(hexchain$value~hexchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(hexchain$value~hexchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(hexchain$value~hexchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(hexchain$value~hexchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(hexchain$value~hexchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(hexchain$value~hexchain$combinations)
+TukeyHSD(ano)
+```
+
+# Lactosylceramide
+
+```{r Lac, echo = F, message = F, warning = F}
+Lacchain <- melt(Lac, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+Lacchain[,7] <- as.character(Lacchain[,7])
+Lacchain[,7] <- as.numeric(substr(Lacchain[,7], 2,length(Lacchain[,7])))
+Lacchain[,9] <- Lacchain[,7] %% 1 == 0
+colnames(Lacchain)[9] <- "Saturated"
+Lacchain[,7] <- as.numeric(substr(as.character(Lacchain[,7]), 1,2))
+num <- length(Lacchain[,1])
+for(x in 1:num){
+  if(Lacchain[x,7] < 8){
+   Lacchain[x,7] <- "small"
+  } else if(8 <= Lacchain[x,7] & Lacchain[x,7] < 16){
+    Lacchain[x,7] <- "medium"
+  } else if(16 <= Lacchain[x,7] & Lacchain[x,7] < 22){
+    Lacchain[x,7] <- "long"
+  } else {
+    Lacchain[x,7] <- "vlong"
+  }
+  if(Lacchain[x,9] == TRUE){
+    Lacchain[x,9] <- "Saturated"
+  } else{
+    Lacchain[x,9] <- "Unsaturated"
+  }
+}
+Lacchain[,7] <- as.factor(Lacchain[,7])
+Lacchain[,9] <- as.factor(Lacchain[,9])
+Lacchain <- as.tibble(Lacchain)
+Lacchain <- Lacchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+Lacchain <- Lacchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(Lacchain$value~Lacchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(Lacchain$value~Lacchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(Lacchain$value~Lacchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(Lacchain$value~Lacchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(Lacchain$value~Lacchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(Lacchain$value~Lacchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(Lacchain$value~Lacchain$combinations)
+TukeyHSD(ano)
+```
+
+# Sphingomyelin
+
+```{r mye, echo = F, message = F, warning = F}
+myechain <- melt(mye, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+myechain[,7] <- as.character(myechain[,7])
+myechain[,7] <- as.numeric(substr(myechain[,7], 2,length(myechain[,7])))
+myechain[,9] <- myechain[,7] %% 1 == 0
+colnames(myechain)[9] <- "Saturated"
+myechain[,7] <- as.numeric(substr(as.character(myechain[,7]), 1,2))
+num <- length(myechain[,1])
+for(x in 1:num){
+  if(myechain[x,7] < 8){
+   myechain[x,7] <- "small"
+  } else if(8 <= myechain[x,7] & myechain[x,7] < 16){
+    myechain[x,7] <- "medium"
+  } else if(16 <= myechain[x,7] & myechain[x,7] < 22){
+    myechain[x,7] <- "long"
+  } else {
+    myechain[x,7] <- "vlong"
+  }
+  if(myechain[x,9] == TRUE){
+    myechain[x,9] <- "Saturated"
+  } else{
+    myechain[x,9] <- "Unsaturated"
+  }
+}
+myechain[,7] <- as.factor(myechain[,7])
+myechain[,9] <- as.factor(myechain[,9])
+myechain <- as.tibble(myechain)
+myechain <- myechain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+myechain <- myechain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+myechain <- myechain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+myechain <- myechain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+myechain <- myechain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+myechain <- myechain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+myechain <- myechain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(myechain$value~myechain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(myechain$value~myechain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(myechain$value~myechain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(myechain$value~myechain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(myechain$value~myechain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(myechain$value~myechain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(myechain$value~myechain$combinations)
+TukeyHSD(ano)
+```
+
+# Sphingosine
+
+```{r sine, echo = F, message = F, warning = F}
+sinechain <- melt(sine, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+sinechain[,7] <- as.character(sinechain[,7])
+sinechain[,7] <- as.numeric(substr(sinechain[,7], 2,length(sinechain[,7])))
+sinechain[,9] <- sinechain[,7] %% 1 == 0
+colnames(sinechain)[9] <- "Saturated"
+sinechain[,7] <- as.numeric(substr(as.character(sinechain[,7]), 1,2))
+num <- length(sinechain[,1])
+for(x in 1:num){
+  if(sinechain[x,7] < 8){
+   sinechain[x,7] <- "small"
+  } else if(8 <= sinechain[x,7] & sinechain[x,7] < 16){
+    sinechain[x,7] <- "medium"
+  } else if(16 <= sinechain[x,7] & sinechain[x,7] < 22){
+    sinechain[x,7] <- "long"
+  } else {
+    sinechain[x,7] <- "vlong"
+  }
+  if(sinechain[x,9] == TRUE){
+    sinechain[x,9] <- "Saturated"
+  } else{
+    sinechain[x,9] <- "Unsaturated"
+  }
+}
+sinechain[,7] <- as.factor(sinechain[,7])
+sinechain[,9] <- as.factor(sinechain[,9])
+sinechain <- as.tibble(sinechain)
+sinechain <- sinechain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+sinechain <- sinechain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+sinechain <- sinechain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+sinechain <- sinechain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+sinechain <- sinechain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+sinechain <- sinechain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+sinechain <- sinechain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(sinechain$value~sinechain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(sinechain$value~sinechain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(sinechain$value~sinechain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(sinechain$value~sinechain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(sinechain$value~sinechain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(sinechain$value~sinechain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(sinechain$value~sinechain$combinations)
+TukeyHSD(ano)
+```
+
+# Triacylglycerols
+
+```{r TAG, echo = F, message = F, warning = F}
+TAGchain <- melt(TAG, id = c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex"))
+TAGchain[,7] <- as.character(TAGchain[,7])
+TAGchain[,7] <- as.numeric(substr(TAGchain[,7], 2,length(TAGchain[,7])))
+TAGchain[,9] <- TAGchain[,7] %% 1 == 0
+colnames(TAGchain)[9] <- "Saturated"
+TAGchain[,7] <- as.numeric(substr(as.character(TAGchain[,7]), 1,2))
+num <- length(TAGchain[,1])
+for(x in 1:num){
+  if(TAGchain[x,7] < 8){
+   TAGchain[x,7] <- "small"
+  } else if(8 <= TAGchain[x,7] & TAGchain[x,7] < 16){
+    TAGchain[x,7] <- "medium"
+  } else if(16 <= TAGchain[x,7] & TAGchain[x,7] < 22){
+    TAGchain[x,7] <- "long"
+  } else {
+    TAGchain[x,7] <- "vlong"
+  }
+  if(TAGchain[x,9] == TRUE){
+    TAGchain[x,9] <- "Saturated"
+  } else{
+    TAGchain[x,9] <- "Unsaturated"
+  }
+}
+TAGchain[,7] <- as.factor(TAGchain[,7])
+TAGchain[,9] <- as.factor(TAGchain[,9])
+TAGchain <- as.tibble(TAGchain)
+TAGchain <- TAGchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"mcombinations" = paste(M_Diet, variable, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"jcombinations" = paste(PW_Diet, variable, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"combinations" = paste(M_Diet, PW_Diet, variable, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"satcombinations" = paste(M_Diet, PW_Diet, Saturated, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"satmatcombinations" = paste(M_Diet, variable, Saturated, sep = "."))
+TAGchain <- TAGchain %>% mutate(.,"satjuvcombinations" = paste(PW_Diet, variable, Saturated, sep = "."))
+print("Length as affected by combination")
+print(anova(aov(TAGchain$value~TAGchain$combinations)))
+print("Length as affected by maternal")
+print(anova(aov(TAGchain$value~TAGchain$mcombinations)))
+print("Length as affected by juvenile")
+print(anova(aov(TAGchain$value~TAGchain$jcombinations)))
+print("Saturation as affected by combination")
+print(anova(aov(TAGchain$value~TAGchain$satcombinations)))
+print("Saturation as affected by maternal")
+print(anova(aov(TAGchain$value~TAGchain$satmatcombinations)))
+print("Saturation as affected by juvenile")
+print(anova(aov(TAGchain$value~TAGchain$satjuvcombinations)))
+print("Tukey test")
+ano <- aov(TAGchain$value~TAGchain$combinations)
+TukeyHSD(ano)
+```
