@@ -1,1 +1,1 @@
-Public repository for the 2018-2019 University of Oregon Bioinformatics and Genomics Master's Program cohort's McCurdy research group. Extended references, supplimental figures and data may be found here. 
+Public repository for the 2018-2019 University of Oregon Bioinformatics and Genomics Master's Program cohort's McCurdy research group. Extended references, supplemental figures and data may be found here. 
