@@ -18,26 +18,37 @@ metadata <- as.tibble(read.table("/Users/alexanderostrovsky/Desktop/McCurdy/2018
 colnames(metadata) <- c("UO.ID", "Group", "M_BM", "M_Diet", "PW_Diet", "Sex")
 setwd("/Users/alexanderostrovsky//Desktop/McCurdy/2018-group-projects-mccurdy/LipidData/LipidData/CSVs from given data/Processed CSVs (format and LOQ)/Modified LOQ/")
 DGs1.2 <- as.tibble(read.csv("1.2DGs.changed LOQ.csv", head = TRUE))
+DGs1.2[,2:25] <- log10(DGs1.2[,2:25])
 DGs1.2 <- cbind(metadata, DGs1.2[,2:25])
 AC <- as.tibble(read.csv("AC.formatted.noloq.csv", head = TRUE))
+AC[,2:13] <- log10(AC[,2:13])
 AC <- cbind(metadata, AC[,2:13])
 Cer <- as.tibble(read.csv("Cerimides.changedLOQ.csv", head = TRUE))
+Cer[,2:13] <- log10(Cer[,2:10])
 Cer <- cbind(metadata, Cer[,2:10])
 DGs1.3 <- as.tibble(read.csv("CM033018 1-3DGs.changedLOQ.csv", head = TRUE))
+DGs1.3[,2:9] <- log10(DGs1.3[,2:9])
 DGs1.3 <- cbind(metadata, DGs1.3[,2:9])
 dh <- as.tibble(read.csv("dhCer.changedLOQ.csv", head = TRUE))
+dh[,2:6] <- log10(dh[,2:6])
 dh <- cbind(metadata, dh[,2:6])
 Glu <- as.tibble(read.csv("GluCer.changedLOQ.csv", head = TRUE))
+Glu[,2:8] <- log10(Glu[,2:8])
 Glu <- cbind(metadata, Glu[,2:8])
 hex <- as.tibble(read.csv("hexosylCer.changedLOQ.csv", head = TRUE))
+hex[,2:9] <- log10(hex[,2:9])
 hex <- cbind(metadata, hex[,2:9])
 Lac <- as.tibble(read.csv("LacCer.changedLOQ.csv", head = TRUE))
+Lac[,2:8] <- log10(Lac[,2:8])
 Lac <- cbind(metadata, Lac[,2:8])
 mye <- as.tibble(read.csv("Sphingomyelins.formatted.noloq.csv"))
+mye[,2:14] <- log10(mye[,2:14])
 mye <- cbind(metadata, mye[,2:14])
 sine <- as.tibble(read.csv("Sphingosine.formatted.noloq.editfordismatrix.csv", header = TRUE))
+sine[,2] <- log10(sine[,2])
 sine <- cbind(metadata, sine[,2])
 TAG <- as.tibble(read.csv("TAG.changedLOQ.csv", head = TRUE))
+TAG[,2:28] <- log10(TAG[,2:28])
 TAG <- cbind(metadata, TAG[,2:28])
 
 ```
@@ -46,12 +57,13 @@ TAG <- cbind(metadata, TAG[,2:28])
 
 ```{r AC, echo = F, message = F}
 ACmeans <- AC[,c(4,5,7:18)] %>% group_by(M_Diet, PW_Diet) %>% summarize_all(funs(mean))
+ACmeans[,3:14] <- log10(ACmeans[,3:14])
 ACse <- AC[,c(4,5,7:18)] %>% group_by(M_Diet, PW_Diet) %>% summarize_all(funs(std.error))
 ACsummary <- merge(ACmeans, ACse, by = c("M_Diet", "PW_Diet"))
 nms <- names(ACsummary)
 for(i in 3:14){
   n = i + 12
-  lab <- paste(gsub("_", " ", str_sub(nms[i], 2, -3)), "(pmol)", " ")
+  lab <- paste("log(", gsub("_", "", str_sub(nms[i], 2, -3)), "(pmol))", "")
   print(ggplot(ACsummary, aes(x = M_Diet, color = PW_Diet, group = PW_Diet), aes_string(y = nms[i])) +
     geom_point(aes_string(y = nms[i])) +
     geom_line(aes_string(y = nms[i], group = nms[2])) +
@@ -266,7 +278,7 @@ for(i in 3:29){
     geom_line(aes_string(y = nms[i], group = nms[2])) +
     theme_classic() + 
     theme(legend.background = element_rect(size=0.5, linetype="solid", colour ="gray47"))+
-    labs(x = "Maternal Diet", y = lab, color = "Juv. Diet", title = "Triacylglycerol") + theme(plot.title =element_text(hjust = 0.5)) + 
+    labs(x = "Maternal Diet", y = lab, color = "Juv. Diet", title = "Triacylglycerol") + theme(plot.title = element_text(hjust = 0.5)) + 
     geom_errorbar(aes_string(ymax=TAGsummary[,i]+TAGsummary[,n], 
                              ymin=TAGsummary[,i]-TAGsummary[,n]), width=.1))
 }
