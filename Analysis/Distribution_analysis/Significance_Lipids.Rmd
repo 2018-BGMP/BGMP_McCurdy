@@ -1,0 +1,86 @@
+---
+title: "Anova dist"
+author: "Alex Ostrovsky"
+date: "10/28/2018"
+output: html_document
+---
+```{r directory, include=FALSE}
+setwd("/Users/alexanderostrovsky/Desktop/McCurdy/2018-group-projects-mccurdy/LipidData/LipidData/CSVs from given data/Processed CSVs (format and LOQ)/Modified LOQ/")
+knitr::opts_chunk$set(error = TRUE)
+```
+
+```{r libraries, include=FALSE, eval=TRUE}
+
+library(tidyverse)
+#install.packages("vegan", repos = "https://cran.r-project.org/src/contrib/vegan_2.5-2.tar.gz")
+#install.packages("MASS", repos = "https://cran.r-project.org/src/contrib/MASS_7.3-50.tar.gz")
+library("vegan")
+library("MASS")
+
+#install.packages("gplots", repos = "https://cran.r-project.org/src/contrib/gplots_3.0.1.tar.gz")
+#install.packages("RColorBrewer", repos = "https://cran.r-project.org/src/contrib/RColorBrewer_1.1-2.tar.gz")
+#install.packages("dendextend",repos = "https://cran.r-project.org/src/contrib/dendextend_1.8.0.tar.gz")
+library("gplots")
+library("RColorBrewer")
+library("dendextend")
+#load packages
+```
+
+```{r data import, include=F}
+metadata <- as.tibble(read.table("../../../../../RNAseq Analysis/RNAseq Analysis/metadata.txt", header = TRUE, row.names = 1)[c(2, 4:15, 17:25, 27:40),2:4])
+DGs1.2 <- read.csv("1.2DGs.changed LOQ.csv", head = TRUE, row.names = 1)
+AC <- read.csv("AC.formatted.noloq.csv", head = TRUE, row.names = 1)
+Cer <- read.csv("Cerimides.changedLOQ.csv", head = TRUE, row.names = 1)
+DGs1.3 <- read.csv("CM033018 1-3DGs.changedLOQ.csv", head = TRUE, row.names = 1)
+dh <- read.csv("dhCer.changedLOQ.csv", head = TRUE, row.names = 1)
+Glu <- read.csv("GluCer.changedLOQ.csv", head = TRUE, row.names = 1)
+hex <- read.csv("hexosylCer.changedLOQ.csv", head = TRUE, row.names = 1)
+Lac <- read.csv("LacCer.changedLOQ.csv", head = TRUE, row.names = 1)
+mye <- read.csv("Sphingomyelins.formatted.noloq.csv", head = TRUE, row.names = 1)
+sine <- read.csv("Sphingosine.formatted.noloq.editfordismatrix.csv", header = TRUE, row.names = 1)
+TAG <- read.csv("TAG.changedLOQ.csv", head = TRUE, row.names = 1)
+
+ALL <- as.tibble(cbind(metadata, AC, Cer, DGs1.2, DGs1.3, dh, Glu, hex, Lac, mye, sine, TAG))
+
+plotlist <- list(DGs1.2, DGs1.3, TAG, AC, dh, Glu, hex, Lac, sine, Cer, mye)
+plotname <- c("DGs1.2", "DGs1.3", "TAG", "AC", "dh", "Glu", "hex", "Lac", "sine", "Cer", "mye")
+```
+
+
+```{r permanova, echo = TRUE, eval = TRUE}
+dis_ALL <- vegdist(ALL[,4:124])
+print("All")
+print("Maternal State")
+adonis(dis_ALL~M_BM, metadata)
+print("Maternal Diet")
+adonis(dis_ALL~M_Diet, metadata)
+print("Juvenile Diet")
+adonis(dis_ALL~PW_Diet, metadata)
+
+n = 1
+for(x in plotlist){
+  diss = vegdist(x)
+  print(plotname[n])
+  print("Maternal State")
+  print(adonis(diss~M_BM, metadata))
+  print("Maternal Diet")
+  print(adonis(diss~M_Diet, metadata))
+  print("Juvenile Diet")
+  print(adonis(diss~PW_Diet, metadata))
+  print("------------------------------------------------------------------------------")
+  n = n + 1
+}
+print("3-way: Maternal State, Maternal Diet, Juvenile Diet
+      ----------------------------------------------------")
+adonis(dis_ALL~M_BM*M_Diet*PW_Diet, metadata)
+print("2-way: Maternal State, Maternal Diet
+      ----------------------------------------------------")
+adonis(dis_ALL~M_BM*M_Diet, metadata)
+print("2-way: Maternal State, Juvenile Diet
+      ----------------------------------------------------")
+adonis(dis_ALL~M_BM*PW_Diet, metadata)
+print("2-way: Maternal Diet, Juvenile Diet
+      ----------------------------------------------------")
+adonis(dis_ALL~M_Diet*PW_Diet, metadata)
+```
+
