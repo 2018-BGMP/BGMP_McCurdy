@@ -57,7 +57,7 @@ TAG <- cbind(metadata, TAG[,2:28])
 
 ```{r AC, echo = F, message = F}
 ACmeans <- AC[,c(4,5,7:18)] %>% group_by(M_Diet, PW_Diet) %>% summarize_all(funs(mean))
-ACmeans[,3:14] <- log10(ACmeans[,3:14])
+ACmeans[,3:14] <- ACmeans[,3:14]
 ACse <- AC[,c(4,5,7:18)] %>% group_by(M_Diet, PW_Diet) %>% summarize_all(funs(std.error))
 ACsummary <- merge(ACmeans, ACse, by = c("M_Diet", "PW_Diet"))
 nms <- names(ACsummary)
@@ -67,7 +67,7 @@ for(i in 3:14){
   print(ggplot(ACsummary, aes(x = M_Diet, color = PW_Diet, group = PW_Diet), aes_string(y = nms[i])) +
     geom_point(aes_string(y = nms[i])) +
     geom_line(aes_string(y = nms[i], group = nms[2])) +
-    theme_classic() + 
+    theme_classic() +
     theme(legend.background = element_rect(size=0.5, linetype="solid", colour ="gray47"))+
     labs(x = "Maternal Diet", y = lab, color = "Juv. Diet", title = "Acylcarnitine") + theme(plot.title =element_text(hjust = 0.5)) + 
     geom_errorbar(aes_string(ymax=ACsummary[,i]+ACsummary[,n], ymin=ACsummary[,i]-ACsummary[,n]), width=.1))
